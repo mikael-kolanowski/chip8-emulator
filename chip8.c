@@ -75,6 +75,7 @@ void chip8_cycle(Chip8* cpu) {
                 chip8_inc_pc(cpu);
             }
             chip8_inc_pc(cpu);
+            break;
         }
         // Skip next if not equal
         case 0x04: {
@@ -82,11 +83,21 @@ void chip8_cycle(Chip8* cpu) {
                 chip8_inc_pc(cpu);
             }
             chip8_inc_pc(cpu);
+            break;
         }
         // Skip next if registers equal
         case 0x05: {
             chip8_inc_pc(cpu);
+            break;
         }
+        case 0xA: {
+            uint16_t target = NNN(instruction);
+            cpu->I = target;
+            chip8_inc_pc(cpu);
+            break;
+        }
+        default:
+            chip8_inc_pc(cpu);
     }
 }
 
@@ -110,8 +121,9 @@ int main() {
     FILE* file = fopen("2-ibm-logo.ch8", "rb");
     Chip8* cpu = chip8_init();
     chip8_load_program(cpu, file);
-    chip8_cycle(cpu);
-    chip8_cycle(cpu);
+    while (cpu->pc - 0x200 < cpu->rom->size) {
+        chip8_cycle(cpu);
+    }
     chip8_dealloc(cpu);
     return EXIT_SUCCESS;
 }
