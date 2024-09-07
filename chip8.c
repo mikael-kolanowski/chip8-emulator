@@ -10,33 +10,33 @@
 
 typedef struct Rom {
     size_t size;
-    unsigned char* data;
+    uint8_t* data;
 } Rom;
 
 typedef struct {
+    Rom* rom;
     unsigned int pc;
     uint8_t regs[16];
     uint16_t I;
     unsigned int sp;
-    Rom rom;
-    unsigned char* display;
-    unsigned char* memory;
+    uint8_t* display;
+    uint8_t* memory;
 } Chip8;
 
 Chip8* chip8_init() {
     Chip8* cpu = malloc(sizeof(Chip8));
     cpu->memory = calloc(1, 1024);
     cpu->pc = 0x200;
-    cpu->sp = 0xf00;  // TODO: find out the real sp position
+    cpu->sp = 0xFA0;
 
-    // TODO: find out where the display should actually be
-    cpu->display = &cpu->memory[0xfaa];
+    cpu->display = &cpu->memory[0xF00];
 
     return cpu;
 }
 
 void chip8_dealloc(Chip8* cpu) {
-    free(cpu->rom.data);
+    free(cpu->rom->data);
+    free(cpu->rom);
     free(cpu->memory);
     free(cpu);
 }
@@ -46,11 +46,12 @@ void chip8_inc_pc(Chip8* cpu) {
 }
 
 void chip8_cycle(Chip8* cpu) {
-    // TODO read instruction at pc
-    uint16_t instruction = 0x00E0;
-    printf("*pc = %x\n", cpu->rom.data[cpu->pc]);
-    printf("*pc+1 = %x\n", cpu->rom.data[cpu->pc + 1]);
-    uint8_t opcode = instruction >> 4;
+    uint8_t* instr_ptr = &cpu->rom->data[cpu->pc];
+    uint8_t upper = instr_ptr[0];
+    uint8_t lower = instr_ptr[1];
+    uint8_t opcode = upper >> 4;
+    uint16_t instruction = upper << 8 | lower;
+    printf("instr=%04X\n", instruction);
     switch (opcode) {
         case 0x0: {
             // TODO implement all special cases
@@ -89,7 +90,7 @@ void chip8_cycle(Chip8* cpu) {
     }
 }
 
-Rom chip8_load_program(Chip8* cpu, FILE* file) {
+void chip8_load_program(Chip8* cpu, FILE* file) {
     fseek(file, 0, SEEK_END);
     size_t file_size = ftell(file);
     rewind(file);
@@ -99,13 +100,17 @@ Rom chip8_load_program(Chip8* cpu, FILE* file) {
     printf("Read %zu bytes\n", read_bytes);
     fclose(file);
 
-    return (Rom){file_size, data};
+    Rom* rom = malloc(sizeof(Rom));
+    rom->size = file_size;
+    rom->data = data;
+    cpu->rom = rom;
 }
 
 int main() {
     FILE* file = fopen("2-ibm-logo.ch8", "rb");
     Chip8* cpu = chip8_init();
     chip8_load_program(cpu, file);
+    chip8_cycle(cpu);
     chip8_cycle(cpu);
     chip8_dealloc(cpu);
     return EXIT_SUCCESS;
