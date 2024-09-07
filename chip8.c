@@ -79,7 +79,9 @@ void chip8_cycle(Chip8* cpu) {
         }
         // Skip next if not equal
         case 0x04: {
-            if (cpu->regs[X(instruction) != NN(instruction)]) {
+            uint8_t r = X(instruction);
+            uint16_t value = NN(instruction);
+            if (cpu->regs[r] != value) {
                 chip8_inc_pc(cpu);
             }
             chip8_inc_pc(cpu);
@@ -87,6 +89,11 @@ void chip8_cycle(Chip8* cpu) {
         }
         // Skip next if registers equal
         case 0x05: {
+            uint8_t r = X(instruction);
+            uint8_t s = Y(instruction);
+            if (cpu->regs[r] == cpu->regs[s]) {
+                chip8_inc_pc(cpu);
+            }
             chip8_inc_pc(cpu);
             break;
         }
