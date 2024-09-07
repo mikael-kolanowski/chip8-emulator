@@ -97,6 +97,13 @@ void chip8_cycle(Chip8* cpu) {
             chip8_inc_pc(cpu);
             break;
         }
+        case 0x7: {
+            uint8_t r = X(instruction);
+            uint16_t value = NN(instruction);
+            cpu->regs[r] += value;
+            chip8_inc_pc(cpu);
+            break;
+        }
         case 0xA: {
             uint16_t target = NNN(instruction);
             cpu->I = target;
