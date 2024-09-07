@@ -111,6 +111,50 @@ void chip8_cycle(Chip8* cpu) {
             chip8_inc_pc(cpu);
             break;
         }
+        case 0x8: {
+            uint8_t r = X(instruction);
+            uint8_t s = Y(instruction);
+            uint8_t op = Z(instruction);
+            switch (op) {
+                case 0:
+                    cpu->regs[r] = cpu->regs[s];
+                    break;
+                case 1:
+                    cpu->regs[r] |= cpu->regs[s];
+                    break;
+                case 2:
+                    cpu->regs[r] &= cpu->regs[s];
+                    break;
+                case 3:
+                    cpu->regs[r] ^= cpu->regs[s];
+                    break;
+                case 4:
+                    cpu->regs[r] += cpu->regs[s];
+                    // TODO: set flag if overflow
+                    break;
+                case 5:
+                    cpu->regs[r] -= cpu->regs[s];
+                    // TODO: set flag to 0 if there is an underflow and 1 when
+                    // there is not.
+                    break;
+                case 6: {
+                    uint8_t lsb = cpu->regs[r] % 2 == 0;
+                    cpu->regs[r] >>= 1;
+                    cpu->regs[0xF] = lsb;
+                    break;
+                }
+                case 7:
+                    cpu->regs[r] = cpu->regs[s] - cpu->regs[r];
+                    break;
+                case 0xE: {
+                    uint8_t msb = cpu->regs[r] >> 7;
+                    cpu->regs[r] <<= 1;
+                    cpu->regs[0xF] = msb;
+                }
+            }
+            chip8_inc_pc(cpu);
+            break;
+        }
         case 0xA: {
             uint16_t target = NNN(instruction);
             cpu->I = target;
