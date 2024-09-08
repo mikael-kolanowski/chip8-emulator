@@ -1,8 +1,10 @@
+#include <raylib.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #define X(instr) (((instr)&0x0f00) >> 8)
 #define Y(instr) (((instr)&0x00f0) >> 4)
@@ -210,16 +212,28 @@ void chip8_cycle(Chip8* cpu) {
             uint8_t s = Y(instruction);
             uint8_t height = Z(instruction);
 
-            uint8_t sx = cpu->regs[r];
-            uint8_t sy = cpu->regs[s];
+            uint8_t sx = cpu->regs[r] % CHIP8_DISPLAY_COLS;
+            uint8_t sy = cpu->regs[s] % CHIP8_DISPLAY_COLS;
 
-            for (uint8_t i = 0; i < height; ++i) {
-                uint8_t row = cpu->memory[cpu->I + i];
+            for (uint8_t irow = 0; irow < height; ++irow) {
+                uint8_t row = cpu->memory[cpu->I + irow];
                 printf("%c%c%c%c%c%c%c%c\n", row & 0x80 ? '#' : ' ',
                        row & 0x40 ? '#' : ' ', row & 0x20 ? '#' : ' ',
                        row & 0x10 ? '#' : ' ', row & 0x08 ? '#' : ' ',
                        row & 0x04 ? '#' : ' ', row & 0x02 ? '#' : ' ',
                        row & 0x01 ? '#' : ' ');
+                for (uint8_t bit = 0; bit < 8; ++bit) {
+                    uint8_t index = sx + bit + (sy + irow) * CHIP8_DISPLAY_COLS;
+                    uint8_t pixel = cpu->display[index];
+                    uint8_t sprite_pixel = (row & (1 << (7 - bit))) != 0;
+                    if (pixel & sprite_pixel) {
+                        cpu->regs[0xF] = 1;
+                    }
+                    if (!pixel && sprite_pixel) {
+                        cpu->regs[0xF] = 0;
+                    }
+                    cpu->display[index] ^= sprite_pixel;
+                }
             }
             printf("\n");
 
@@ -316,8 +330,26 @@ int main(int argc, char* argv[]) {
         printf("Unable to load ROM file %s\n", rom_file_path);
         return EXIT_FAILURE;
     }
-    while (1) {
+
+    const int pixel_size = 8;
+    InitWindow(CHIP8_DISPLAY_COLS * pixel_size, CHIP8_DISPLAY_ROWS * pixel_size,
+               "Chip8");
+    SetTargetFPS(60);
+    while (!WindowShouldClose()) {
         chip8_cycle(cpu);
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        for (size_t r = 0; r < CHIP8_DISPLAY_ROWS; ++r) {
+            for (size_t c = 0; c < CHIP8_DISPLAY_COLS; ++c) {
+                uint8_t pixel = cpu->display[c + r * CHIP8_DISPLAY_COLS];
+                if (pixel) {
+                    DrawRectangle(c * pixel_size, r * pixel_size, pixel_size,
+                                  pixel_size, RAYWHITE);
+                }
+            }
+        }
+        EndDrawing();
     }
     chip8_dealloc(cpu);
     return EXIT_SUCCESS;
