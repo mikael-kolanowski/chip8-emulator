@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@ typedef struct {
     unsigned int sp;
     uint16_t stack[CHIP8_STACK_DEPTH];
     uint8_t display[CHIP8_DISPLAY_COLS * CHIP8_DISPLAY_ROWS];
+    bool keys[16];
     uint8_t* memory;
 } Chip8;
 
@@ -222,6 +224,63 @@ void chip8_cycle(Chip8* cpu) {
             }
             printf("\n");
 
+            chip8_inc_pc(cpu);
+            break;
+        }
+        case 0xE: {
+            uint8_t r = X(instruction);
+            uint8_t op = NN(instruction);
+            switch (op) {
+                case 0x9E:
+                    if (cpu->keys[cpu->regs[r]]) {
+                        chip8_inc_pc(cpu);
+                    }
+                    break;
+                case 0xA1:
+                    if (!cpu->keys[cpu->regs[r]]) {
+                        chip8_inc_pc(cpu);
+                    }
+                    break;
+            }
+            chip8_inc_pc(cpu);
+            break;
+        }
+        case 0xF: {
+            uint8_t r = X(instruction);
+            uint16_t op = NN(instruction);
+            switch (op) {
+                case 0x07:
+                    // Set register to delay timer value
+                    cpu->regs[r] = 0;
+                    break;
+                case 0x0A:
+                    // Await key press and store in register
+                    break;
+                case 0x15:
+                    // Set delay timer value
+                    break;
+                case 0x18:
+                    break;
+                case 0x1E:
+                    cpu->I += cpu->regs[r];
+                    break;
+                case 0x29:
+                    // Set I to sprite addr of char in register
+                    break;
+                case 0x33:
+                    // BCD
+                    break;
+                case 0x55:  // Register dump
+                    for (uint8_t i = 0; i <= cpu->regs[r]; ++i) {
+                        cpu->memory[cpu->I + i] = cpu->regs[i];
+                    }
+                    break;
+                case 0x65:  // Register load
+                    for (uint8_t i = 0; i <= cpu->regs[r]; ++i) {
+                        cpu->regs[i] = cpu->memory[cpu->I + i];
+                    }
+                    break;
+            }
             chip8_inc_pc(cpu);
             break;
         }
