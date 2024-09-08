@@ -53,6 +53,8 @@ void chip8_cycle(Chip8* cpu) {
                     break;
                 case 0xEE:
                     // Return from procedure
+                    --cpu->sp;
+                    cpu->pc = cpu->memory[cpu->sp];
                     break;
                 default:
                     // Unimplemented
@@ -70,6 +72,10 @@ void chip8_cycle(Chip8* cpu) {
         case 0x2: {
             // 1. push current pc onto the stack
             // 2. set pc to NNN of the current instruction
+            cpu->memory[cpu->sp] = cpu->pc;
+            ++cpu->sp;
+            uint16_t target = NNN(instruction);
+            cpu->pc = target;
             break;
         }
         // Skip next if equal
