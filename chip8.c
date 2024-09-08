@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define X(instr) (((instr)&0x0f00) >> 8)
 #define Y(instr) (((instr)&0x00f0) >> 4)
@@ -8,22 +9,30 @@
 #define NN(instr) (((instr)&0x00ff))
 #define NNN(instr) (((instr)&0x0fff))
 
+#define CHIP8_DISPLAY_ROWS 31
+#define CHIP8_DISPLAY_COLS 64
+
+#define CHIP8_STACK_DEPTH 12
+#define CHIP8_MEMORY_SIZE 4096
+
 typedef struct {
     unsigned int pc;
     uint8_t regs[16];
     uint16_t I;
     unsigned int sp;
-    uint8_t* display;
+    uint16_t stack[CHIP8_STACK_DEPTH];
+    uint8_t display[CHIP8_DISPLAY_COLS * CHIP8_DISPLAY_ROWS];
     uint8_t* memory;
 } Chip8;
 
 Chip8* chip8_init() {
     Chip8* cpu = malloc(sizeof(Chip8));
-    cpu->memory = calloc(1, 1024);
+    cpu->memory = calloc(1, CHIP8_MEMORY_SIZE);
     cpu->pc = 0x200;
-    cpu->sp = 0xFA0;
+    cpu->sp = 0;
 
-    cpu->display = &cpu->memory[0xF00];
+    memset(cpu->display, 0, CHIP8_DISPLAY_ROWS * CHIP8_DISPLAY_COLS);
+    memset(cpu->stack, 0, CHIP8_STACK_DEPTH);
 
     return cpu;
 }
@@ -226,7 +235,6 @@ void chip8_load_program(Chip8* cpu, FILE* file) {
     size_t file_size = ftell(file);
     rewind(file);
 
-    // size_t read_bytes = fread(data + 0x200, 1, file_size, file);
     size_t read_bytes = fread(cpu->memory + 0x200, 1, file_size, file);
     printf("Read %zu bytes\n", read_bytes);
     fclose(file);
