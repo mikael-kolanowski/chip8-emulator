@@ -215,7 +215,6 @@ void chip8_cycle(Chip8* cpu) {
 
             for (uint8_t i = 0; i < height; ++i) {
                 uint8_t row = cpu->memory[cpu->I + i];
-                // printf("row: %04X\n", row);
                 printf("%c%c%c%c%c%c%c%c\n", row & 0x80 ? '#' : ' ',
                        row & 0x40 ? '#' : ' ', row & 0x20 ? '#' : ' ',
                        row & 0x10 ? '#' : ' ', row & 0x08 ? '#' : ' ',
@@ -289,7 +288,11 @@ void chip8_cycle(Chip8* cpu) {
     }
 }
 
-void chip8_load_program(Chip8* cpu, FILE* file) {
+bool chip8_load_program(Chip8* cpu, const char* path) {
+    FILE* file = fopen(path, "rb");
+    if (file == NULL) {
+        return false;
+    }
     fseek(file, 0, SEEK_END);
     size_t file_size = ftell(file);
     rewind(file);
@@ -297,12 +300,22 @@ void chip8_load_program(Chip8* cpu, FILE* file) {
     size_t read_bytes = fread(cpu->memory + 0x200, 1, file_size, file);
     printf("Read %zu bytes\n", read_bytes);
     fclose(file);
+
+    return true;
 }
 
-int main() {
-    FILE* file = fopen("2-ibm-logo.ch8", "rb");
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        printf("Usage: chip8 <filename>\n");
+        return EXIT_FAILURE;
+    }
+
+    const char* rom_file_path = argv[1];
     Chip8* cpu = chip8_init();
-    chip8_load_program(cpu, file);
+    if (!chip8_load_program(cpu, rom_file_path)) {
+        printf("Unable to load ROM file %s\n", rom_file_path);
+        return EXIT_FAILURE;
+    }
     while (1) {
         chip8_cycle(cpu);
     }
