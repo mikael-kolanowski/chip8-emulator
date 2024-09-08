@@ -4,17 +4,11 @@
 
 #define X(instr) (((instr)&0x0f00) >> 8)
 #define Y(instr) (((instr)&0x00f0) >> 4)
-#define Z(instr) (((instr)&0x000f) >> 4)
+#define Z(instr) (((instr)&0x000f))
 #define NN(instr) (((instr)&0x00ff))
 #define NNN(instr) (((instr)&0x0fff))
 
-typedef struct Rom {
-    size_t size;
-    uint8_t* data;
-} Rom;
-
 typedef struct {
-    Rom* rom;
     unsigned int pc;
     uint8_t regs[16];
     uint16_t I;
@@ -35,8 +29,6 @@ Chip8* chip8_init() {
 }
 
 void chip8_dealloc(Chip8* cpu) {
-    free(cpu->rom->data);
-    free(cpu->rom);
     free(cpu->memory);
     free(cpu);
 }
@@ -46,15 +38,26 @@ void chip8_inc_pc(Chip8* cpu) {
 }
 
 void chip8_cycle(Chip8* cpu) {
-    uint8_t* instr_ptr = &cpu->rom->data[cpu->pc];
+    uint8_t* instr_ptr = &cpu->memory[cpu->pc];
     uint8_t upper = instr_ptr[0];
     uint8_t lower = instr_ptr[1];
     uint8_t opcode = upper >> 4;
     uint16_t instruction = upper << 8 | lower;
-    printf("instr=%04X\n", instruction);
+    // printf("instr=%04X\n", instruction);
     switch (opcode) {
         case 0x0: {
-            // TODO implement all special cases
+            uint8_t op = NN(instruction);
+            switch (op) {
+                case 0xE0:
+                    // Clear screen
+                    break;
+                case 0xEE:
+                    // Return from procedure
+                    break;
+                default:
+                    // Unimplemented
+                    break;
+            }
             chip8_inc_pc(cpu);
             break;
         }
@@ -128,14 +131,15 @@ void chip8_cycle(Chip8* cpu) {
                 case 3:
                     cpu->regs[r] ^= cpu->regs[s];
                     break;
-                case 4:
-                    cpu->regs[r] += cpu->regs[s];
-                    // TODO: set flag if overflow
+                case 4: {
+                    uint16_t sum = cpu->regs[r] + cpu->regs[s];
+                    cpu->regs[0xF] = sum > 0xFF;
+                    cpu->regs[r] = sum & 0xFF;
                     break;
+                }
                 case 5:
+                    cpu->regs[0xF] = cpu->regs[r] > cpu->regs[s];
                     cpu->regs[r] -= cpu->regs[s];
-                    // TODO: set flag to 0 if there is an underflow and 1 when
-                    // there is not.
                     break;
                 case 6: {
                     uint8_t lsb = cpu->regs[r] % 2 == 0;
@@ -150,7 +154,17 @@ void chip8_cycle(Chip8* cpu) {
                     uint8_t msb = cpu->regs[r] >> 7;
                     cpu->regs[r] <<= 1;
                     cpu->regs[0xF] = msb;
+                    break;
                 }
+            }
+            chip8_inc_pc(cpu);
+            break;
+        }
+        case 0x9: {
+            uint8_t r = X(instruction);
+            uint8_t s = Y(instruction);
+            if (cpu->regs[r] != cpu->regs[s]) {
+                chip8_inc_pc(cpu);
             }
             chip8_inc_pc(cpu);
             break;
@@ -158,6 +172,41 @@ void chip8_cycle(Chip8* cpu) {
         case 0xA: {
             uint16_t target = NNN(instruction);
             cpu->I = target;
+            chip8_inc_pc(cpu);
+            break;
+        }
+        case 0xB: {
+            uint16_t target = NNN(instruction);
+            cpu->pc = target + cpu->regs[0];
+            break;
+        }
+        case 0xC: {
+            uint8_t r = X(instruction);
+            uint8_t mask = NN(instruction);
+            uint8_t rnd = (rand() % 0xFF) & mask;
+            cpu->regs[r] = rnd;
+            chip8_inc_pc(cpu);
+            break;
+        }
+        case 0xD: {
+            uint8_t r = X(instruction);
+            uint8_t s = Y(instruction);
+            uint8_t height = Z(instruction);
+
+            uint8_t sx = cpu->regs[r];
+            uint8_t sy = cpu->regs[s];
+
+            for (uint8_t i = 0; i < height; ++i) {
+                uint8_t row = cpu->memory[cpu->I + i];
+                // printf("row: %04X\n", row);
+                printf("%c%c%c%c%c%c%c%c\n", row & 0x80 ? '#' : ' ',
+                       row & 0x40 ? '#' : ' ', row & 0x20 ? '#' : ' ',
+                       row & 0x10 ? '#' : ' ', row & 0x08 ? '#' : ' ',
+                       row & 0x04 ? '#' : ' ', row & 0x02 ? '#' : ' ',
+                       row & 0x01 ? '#' : ' ');
+            }
+            printf("\n");
+
             chip8_inc_pc(cpu);
             break;
         }
@@ -171,22 +220,17 @@ void chip8_load_program(Chip8* cpu, FILE* file) {
     size_t file_size = ftell(file);
     rewind(file);
 
-    unsigned char* data = calloc(1, file_size + 0x200);
-    size_t read_bytes = fread(data + 0x200, 1, file_size, file);
+    // size_t read_bytes = fread(data + 0x200, 1, file_size, file);
+    size_t read_bytes = fread(cpu->memory + 0x200, 1, file_size, file);
     printf("Read %zu bytes\n", read_bytes);
     fclose(file);
-
-    Rom* rom = malloc(sizeof(Rom));
-    rom->size = file_size;
-    rom->data = data;
-    cpu->rom = rom;
 }
 
 int main() {
     FILE* file = fopen("2-ibm-logo.ch8", "rb");
     Chip8* cpu = chip8_init();
     chip8_load_program(cpu, file);
-    while (cpu->pc - 0x200 < cpu->rom->size) {
+    while (1) {
         chip8_cycle(cpu);
     }
     chip8_dealloc(cpu);
