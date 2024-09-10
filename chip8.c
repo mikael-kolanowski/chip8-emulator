@@ -12,8 +12,9 @@
 #define NN(instr) (((instr)&0x00ff))
 #define NNN(instr) (((instr)&0x0fff))
 
-#define CHIP8_DISPLAY_ROWS 31
+#define CHIP8_DISPLAY_ROWS 32
 #define CHIP8_DISPLAY_COLS 64
+const int CHIP8_DISPLAY_SIZE = CHIP8_DISPLAY_ROWS * CHIP8_DISPLAY_COLS;
 
 #define CHIP8_STACK_DEPTH 12
 #define CHIP8_MEMORY_SIZE 4096
@@ -35,7 +36,7 @@ Chip8* chip8_init() {
     cpu->pc = 0x200;
     cpu->sp = 0;
 
-    memset(cpu->display, 0, CHIP8_DISPLAY_ROWS * CHIP8_DISPLAY_COLS);
+    memset(cpu->display, 0, CHIP8_DISPLAY_SIZE);
     memset(cpu->stack, 0, CHIP8_STACK_DEPTH);
 
     return cpu;
@@ -56,13 +57,13 @@ void chip8_cycle(Chip8* cpu) {
     uint8_t lower = instr_ptr[1];
     uint8_t opcode = upper >> 4;
     uint16_t instruction = upper << 8 | lower;
-    // printf("instr=%04X\n", instruction);
     switch (opcode) {
         case 0x0: {
             uint8_t op = NN(instruction);
             switch (op) {
                 case 0xE0:
                     // Clear screen
+                    memset(cpu->display, 0, CHIP8_DISPLAY_SIZE);
                     break;
                 case 0xEE:
                     // Return from procedure
@@ -212,21 +213,17 @@ void chip8_cycle(Chip8* cpu) {
             uint8_t s = Y(instruction);
             uint8_t height = Z(instruction);
 
-            uint8_t sx = cpu->regs[r] % CHIP8_DISPLAY_COLS;
-            uint8_t sy = cpu->regs[s] % CHIP8_DISPLAY_COLS;
+            uint8_t display_x = cpu->regs[r] % CHIP8_DISPLAY_COLS;
+            uint8_t display_y = cpu->regs[s] % CHIP8_DISPLAY_ROWS;
 
-            for (uint8_t irow = 0; irow < height; ++irow) {
-                uint8_t row = cpu->memory[cpu->I + irow];
-                printf("%c%c%c%c%c%c%c%c\n", row & 0x80 ? '#' : ' ',
-                       row & 0x40 ? '#' : ' ', row & 0x20 ? '#' : ' ',
-                       row & 0x10 ? '#' : ' ', row & 0x08 ? '#' : ' ',
-                       row & 0x04 ? '#' : ' ', row & 0x02 ? '#' : ' ',
-                       row & 0x01 ? '#' : ' ');
+            for (uint8_t row = 0; row < height; ++row) {
+                uint8_t sprite_row = cpu->memory[cpu->I + row];
                 for (uint8_t bit = 0; bit < 8; ++bit) {
-                    uint8_t index = sx + bit + (sy + irow) * CHIP8_DISPLAY_COLS;
+                    uint16_t index = display_x + bit +
+                                     (display_y + row) * CHIP8_DISPLAY_COLS;
                     uint8_t pixel = cpu->display[index];
-                    uint8_t sprite_pixel = (row & (1 << (7 - bit))) != 0;
-                    if (pixel & sprite_pixel) {
+                    uint8_t sprite_pixel = (sprite_row & (1 << (7 - bit))) != 0;
+                    if (pixel && sprite_pixel) {
                         cpu->regs[0xF] = 1;
                     }
                     if (!pixel && sprite_pixel) {
@@ -235,7 +232,6 @@ void chip8_cycle(Chip8* cpu) {
                     cpu->display[index] ^= sprite_pixel;
                 }
             }
-            printf("\n");
 
             chip8_inc_pc(cpu);
             break;
