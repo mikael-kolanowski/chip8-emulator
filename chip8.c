@@ -68,7 +68,7 @@ void chip8_cycle(Chip8* cpu) {
                 case 0xEE:
                     // Return from procedure
                     --cpu->sp;
-                    cpu->pc = cpu->memory[cpu->sp];
+                    cpu->pc = cpu->stack[cpu->sp];
                     break;
                 default:
                     // Unimplemented
@@ -86,22 +86,24 @@ void chip8_cycle(Chip8* cpu) {
         case 0x2: {
             // 1. push current pc onto the stack
             // 2. set pc to NNN of the current instruction
-            cpu->memory[cpu->sp] = cpu->pc;
+            cpu->stack[cpu->sp] = cpu->pc;
             ++cpu->sp;
             uint16_t target = NNN(instruction);
             cpu->pc = target;
             break;
         }
         // Skip next if equal
-        case 0x03: {
-            if (cpu->regs[X(instruction) == NN(instruction)]) {
+        case 0x3: {
+            uint8_t r = X(instruction);
+            uint16_t value = NN(instruction);
+            if (cpu->regs[r] == value) {
                 chip8_inc_pc(cpu);
             }
             chip8_inc_pc(cpu);
             break;
         }
         // Skip next if not equal
-        case 0x04: {
+        case 0x4: {
             uint8_t r = X(instruction);
             uint16_t value = NN(instruction);
             if (cpu->regs[r] != value) {
@@ -111,7 +113,7 @@ void chip8_cycle(Chip8* cpu) {
             break;
         }
         // Skip next if registers equal
-        case 0x05: {
+        case 0x5: {
             uint8_t r = X(instruction);
             uint8_t s = Y(instruction);
             if (cpu->regs[r] == cpu->regs[s]) {
@@ -276,16 +278,24 @@ void chip8_cycle(Chip8* cpu) {
                 case 0x29:
                     // Set I to sprite addr of char in register
                     break;
-                case 0x33:
-                    // BCD
+                case 0x33: {  // BCD
+                    uint8_t value = cpu->regs[r];
+                    cpu->memory[cpu->I + 2] = value % 10;
+                    value /= 10;
+                    cpu->memory[cpu->I + 1] = value % 10;
+                    value /= 10;
+                    cpu->memory[cpu->I] = value % 10;
+
                     break;
+                }
+
                 case 0x55:  // Register dump
-                    for (uint8_t i = 0; i <= cpu->regs[r]; ++i) {
+                    for (uint8_t i = 0; i <= r; ++i) {
                         cpu->memory[cpu->I + i] = cpu->regs[i];
                     }
                     break;
                 case 0x65:  // Register load
-                    for (uint8_t i = 0; i <= cpu->regs[r]; ++i) {
+                    for (uint8_t i = 0; i <= r; ++i) {
                         cpu->regs[i] = cpu->memory[cpu->I + i];
                     }
                     break;
