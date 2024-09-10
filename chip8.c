@@ -19,6 +19,24 @@ const int CHIP8_DISPLAY_SIZE = CHIP8_DISPLAY_ROWS * CHIP8_DISPLAY_COLS;
 #define CHIP8_STACK_DEPTH 12
 #define CHIP8_MEMORY_SIZE 4096
 
+int key_map[] = {
+    /* 0 */ KEY_X,
+    /* 1 */ KEY_ONE,
+    /* 2 */ KEY_TWO,
+    /* 3 */ KEY_THREE,
+    /* 4 */ KEY_Q,
+    /* 5 */ KEY_W,
+    /* 6 */ KEY_E,
+    /* 7 */ KEY_A,
+    /* 8 */ KEY_S,
+    /* 9 */ KEY_D,
+    /* a */ KEY_Z,
+    /* b */ KEY_C,
+    /* c */ KEY_FOUR,
+    /* d */ KEY_R,
+    /* e */ KEY_F,
+    /* f */ KEY_V};
+
 typedef struct {
     unsigned int pc;
     uint8_t regs[16];
@@ -259,6 +277,8 @@ void chip8_cycle(Chip8* cpu) {
         case 0xF: {
             uint8_t r = X(instruction);
             uint16_t op = NN(instruction);
+            bool wait = false;
+            bool key_pressed = false;
             switch (op) {
                 case 0x07:
                     // Set register to delay timer value
@@ -266,6 +286,17 @@ void chip8_cycle(Chip8* cpu) {
                     break;
                 case 0x0A:
                     // Await key press and store in register
+                    for (size_t i = 0; i < 16; ++i) {
+                        if (cpu->keys[i]) {
+                            cpu->regs[i] = i;
+                            key_pressed = true;
+                            break;
+                        }
+                        if (!key_pressed)
+                            // We have gone though all possible keys and none
+                            // were pressed. Better luck next time.
+                            wait = true;
+                    }
                     break;
                 case 0x15:
                     // Set delay timer value
@@ -300,7 +331,8 @@ void chip8_cycle(Chip8* cpu) {
                     }
                     break;
             }
-            chip8_inc_pc(cpu);
+            if (!wait)
+                chip8_inc_pc(cpu);
             break;
         }
         default:
@@ -342,7 +374,16 @@ int main(int argc, char* argv[]) {
                "Chip8");
     SetTargetFPS(60);
     while (!WindowShouldClose()) {
+        for (size_t i = 0; i < 16; ++i) {
+            int platformKey = key_map[i];
+            if (IsKeyDown(platformKey)) {
+                cpu->keys[i] = true;
+            }
+        }
+
         chip8_cycle(cpu);
+
+        memset(cpu->keys, 0, 16);
 
         BeginDrawing();
         ClearBackground(BLACK);
