@@ -19,6 +19,8 @@ const int CHIP8_DISPLAY_SIZE = CHIP8_DISPLAY_ROWS * CHIP8_DISPLAY_COLS;
 #define CHIP8_STACK_DEPTH 12
 #define CHIP8_MEMORY_SIZE 4096
 
+#define CHIP8_N_KEYS 16
+#define CHIP8_N_REGS 16
 int key_map[] = {
     /* 0 */ KEY_X,
     /* 1 */ KEY_ONE,
@@ -39,12 +41,12 @@ int key_map[] = {
 
 typedef struct {
     unsigned int pc;
-    uint8_t regs[16];
+    uint8_t regs[CHIP8_N_REGS];
     uint16_t I;
     unsigned int sp;
     uint16_t stack[CHIP8_STACK_DEPTH];
     uint8_t display[CHIP8_DISPLAY_COLS * CHIP8_DISPLAY_ROWS];
-    bool keys[16];
+    bool keys[CHIP8_N_KEYS];
     uint8_t* memory;
 } Chip8;
 
@@ -383,7 +385,7 @@ int main(int argc, char* argv[]) {
 
         chip8_cycle(cpu);
 
-        memset(cpu->keys, 0, 16);
+        memset(cpu->keys, 0, CHIP8_N_KEYS);
 
         BeginDrawing();
         ClearBackground(BLACK);
