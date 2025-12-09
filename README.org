@@ -1,0 +1,18 @@
+This is a simple Chip8 emulator implenented using C and Raylib.
+
+* Usage
+#+BEGIN bash
+./chip8 <path/to/rom.ch8>
+#+END bash
+
+* Keymap
+
+|---+---+---+---|
+| 1 | 2 | 3 | 4 |
+|---+---+---+---|
+| Q | W | E | R |
+|---+---+---+---|
+| A | S | D | F |
+|---+---+---+---|
+| Z | X | C | V |
+|---+---+---+---|
