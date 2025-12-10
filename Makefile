@@ -1,4 +1,17 @@
-OUT=chip8
+OUT_DIR=bin
+OUT=$(OUT_DIR)/chip8
 
-chip8: chip8.c
-	cc chip8.c $$(pkg-config --libs --cflags raylib) -o $(OUT)
+STD=c99
+
+all: $(OUT)
+
+$(OUT): chip8.c | $(OUT_DIR)
+	cc -std=$(STD) chip8.c $$(pkg-config --libs --cflags raylib) -o $(OUT)
+
+$(OUT_DIR):
+	mkdir -p $(OUT_DIR)
+
+clean:
+	rm -rf $(OUT_DIR)
+
+.PHONY: all clean

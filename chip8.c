@@ -48,9 +48,11 @@ typedef struct {
     uint8_t display[CHIP8_DISPLAY_COLS * CHIP8_DISPLAY_ROWS];
     bool keys[CHIP8_N_KEYS];
     uint8_t* memory;
+	uint8_t delay_timer;
+	uint8_t sound_timer;
 } Chip8;
 
-Chip8* chip8_init() {
+Chip8* chip8_create() {
     Chip8* cpu = malloc(sizeof(Chip8));
     cpu->memory = calloc(1, CHIP8_MEMORY_SIZE);
     cpu->pc = 0x200;
@@ -62,7 +64,7 @@ Chip8* chip8_init() {
     return cpu;
 }
 
-void chip8_dealloc(Chip8* cpu) {
+void chip8_destroy(Chip8* cpu) {
     free(cpu->memory);
     free(cpu);
 }
@@ -71,12 +73,13 @@ void chip8_inc_pc(Chip8* cpu) {
     cpu->pc += 2;
 }
 
-void chip8_cycle(Chip8* cpu) {
+void chip8_execute_next(Chip8* cpu) {
     uint8_t* instr_ptr = &cpu->memory[cpu->pc];
     uint8_t upper = instr_ptr[0];
     uint8_t lower = instr_ptr[1];
     uint8_t opcode = upper >> 4;
     uint16_t instruction = upper << 8 | lower;
+	printf("Current instruction: %x\n", instruction);
     switch (opcode) {
         case 0x0: {
             uint8_t op = NN(instruction);
@@ -284,11 +287,11 @@ void chip8_cycle(Chip8* cpu) {
             switch (op) {
                 case 0x07:
                     // Set register to delay timer value
-                    cpu->regs[r] = 0;
+                    cpu->regs[r] = cpu->delay_timer;
                     break;
                 case 0x0A:
                     // Await key press and store in register
-                    for (size_t i = 0; i < 16; ++i) {
+                    for (size_t i = 0; i < CHIP8_N_KEYS; ++i) {
                         if (cpu->keys[i]) {
                             cpu->regs[i] = i;
                             key_pressed = true;
@@ -302,8 +305,10 @@ void chip8_cycle(Chip8* cpu) {
                     break;
                 case 0x15:
                     // Set delay timer value
+					cpu->delay_timer = cpu->regs[r];
                     break;
                 case 0x18:
+					cpu->sound_timer = cpu->regs[r];
                     break;
                 case 0x1E:
                     cpu->I += cpu->regs[r];
@@ -365,7 +370,7 @@ int main(int argc, char* argv[]) {
     }
 
     const char* rom_file_path = argv[1];
-    Chip8* cpu = chip8_init();
+    Chip8* cpu = chip8_create();
     if (!chip8_load_program(cpu, rom_file_path)) {
         printf("Unable to load ROM file %s\n", rom_file_path);
         return EXIT_FAILURE;
@@ -376,16 +381,25 @@ int main(int argc, char* argv[]) {
                "Chip8");
     SetTargetFPS(60);
     while (!WindowShouldClose()) {
-        for (size_t i = 0; i < 16; ++i) {
-            int platformKey = key_map[i];
-            if (IsKeyDown(platformKey)) {
+        for (size_t i = 0; i < CHIP8_N_KEYS; ++i) {
+            int platform_key = key_map[i];
+            if (IsKeyDown(platform_key)) {
                 cpu->keys[i] = true;
             }
         }
 
-        chip8_cycle(cpu);
+        chip8_execute_next(cpu);
 
+		// Reset pressed keys
         memset(cpu->keys, 0, CHIP8_N_KEYS);
+
+		// Decrement timers if necessary
+		if (cpu->delay_timer > 0) {
+			cpu->delay_timer--;
+		}
+		if (cpu->sound_timer > 0) {
+			cpu->sound_timer--;
+		}
 
         BeginDrawing();
         ClearBackground(BLACK);
@@ -400,6 +414,6 @@ int main(int argc, char* argv[]) {
         }
         EndDrawing();
     }
-    chip8_dealloc(cpu);
+    chip8_destroy(cpu);
     return EXIT_SUCCESS;
 }
