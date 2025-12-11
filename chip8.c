@@ -500,7 +500,8 @@ int main(int argc, char* argv[]) {
     const int pixel_size = 8;
     InitWindow(CHIP8_DISPLAY_COLS * pixel_size, CHIP8_DISPLAY_ROWS * pixel_size,
                "Chip8");
-    SetTargetFPS(60);
+    SetTargetFPS(500);
+	int i = 0;
     while (!WindowShouldClose()) {
         for (size_t i = 0; i < CHIP8_N_KEYS; ++i) {
             int platform_key = key_map[i];
@@ -515,25 +516,28 @@ int main(int argc, char* argv[]) {
         memset(cpu->keys, 0, CHIP8_N_KEYS);
 
 		// Decrement timers if necessary
-		if (cpu->delay_timer > 0) {
-			cpu->delay_timer--;
-		}
-		if (cpu->sound_timer > 0) {
-			cpu->sound_timer--;
-		}
+		if (i % 8 == 0) {
+			i = 0;
+			if (cpu->delay_timer > 0) {
+				cpu->delay_timer--;
+			}
+			if (cpu->sound_timer > 0) {
+				cpu->sound_timer--;
+			}
 
-        BeginDrawing();
-        ClearBackground(BLACK);
-        for (size_t r = 0; r < CHIP8_DISPLAY_ROWS; ++r) {
-            for (size_t c = 0; c < CHIP8_DISPLAY_COLS; ++c) {
-                uint8_t pixel = cpu->display[c + r * CHIP8_DISPLAY_COLS];
-                if (pixel) {
-                    DrawRectangle(c * pixel_size, r * pixel_size, pixel_size,
-                                  pixel_size, RAYWHITE);
-                }
-            }
-        }
-        EndDrawing();
+			BeginDrawing();
+			ClearBackground(BLACK);
+			for (size_t r = 0; r < CHIP8_DISPLAY_ROWS; ++r) {
+				for (size_t c = 0; c < CHIP8_DISPLAY_COLS; ++c) {
+					uint8_t pixel = cpu->display[c + r * CHIP8_DISPLAY_COLS];
+					if (pixel) {
+						DrawRectangle(c * pixel_size, r * pixel_size, pixel_size,
+									  pixel_size, RAYWHITE);
+					}
+				}
+			}
+			EndDrawing();
+		}
     }
     chip8_destroy(cpu);
     return EXIT_SUCCESS;
