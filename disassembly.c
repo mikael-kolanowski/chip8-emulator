@@ -43,6 +43,7 @@ void chip8_disassemble(uint16_t instr, char* buffer) {
 			break;
 		}
 		case 0x8: {
+			// TODO: Properly disassemble this one
 			sprintf(buffer, "ARITHMETIC");
 			break;
 		}

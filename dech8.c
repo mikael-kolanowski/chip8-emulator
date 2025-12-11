@@ -25,11 +25,10 @@ void disassembler_destroy(Disassembler* dis) {
 	free(dis);
 }
 
-
-bool load_rom(uint8_t* dest, const char* path) {
+int load_rom(uint8_t* dest, const char* path) {
     FILE* file = fopen(path, "rb");
     if (file == NULL) {
-        return false;
+        return -1;
     }
     fseek(file, 0, SEEK_END);
     size_t file_size = ftell(file);
@@ -38,7 +37,19 @@ bool load_rom(uint8_t* dest, const char* path) {
     size_t read_bytes = fread(dest, 1, file_size, file);
     printf("Read %zu bytes\n", read_bytes);
     fclose(file);
-	return true;
+	return read_bytes;
+}
+
+void disassemble_next(Disassembler* dis) {
+    uint8_t* instr_ptr = &dis->rom[dis->pc];
+    uint8_t upper = instr_ptr[0];
+    uint8_t lower = instr_ptr[1];
+    uint8_t opcode = upper >> 4;
+    uint16_t instruction = upper << 8 | lower;
+	char buffer[50];
+	chip8_disassemble(instruction, buffer);
+	// TODO: Detect sprites and display them.
+	printf("%04x | %04x\t%s\n", dis->pc + 0x200, instruction, buffer);
 }
 
 int main(int argc, char** argv) {
@@ -51,12 +62,16 @@ int main(int argc, char** argv) {
 	const char* rom_file_path = argv[1];
 
 	Disassembler* dis = disassembler_create();
-	if (!load_rom(dis->rom, rom_file_path)) {
+	int read_bytes = load_rom(dis->rom, rom_file_path);
+	if (!read_bytes) {
 		printf("Unable to load ROM at %s\n", rom_file_path);
 		return EXIT_FAILURE;
 	}
 
-	printf("%04x\n", NNN(0x1234));
+	for (int i = 0; i < read_bytes / 2; i++) {
+		disassemble_next(dis);
+		dis->pc += 2;
+	}
 	
 	disassembler_destroy(dis);
 
