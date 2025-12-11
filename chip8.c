@@ -1,48 +1,9 @@
 #include <raylib.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define X(instr) (((instr)&0x0f00) >> 8)
-#define Y(instr) (((instr)&0x00f0) >> 4)
-#define Z(instr) (((instr)&0x000f))
-#define NN(instr) (((instr)&0x00ff))
-#define NNN(instr) (((instr)&0x0fff))
-
-#define CHIP8_DISPLAY_ROWS 32
-#define CHIP8_DISPLAY_COLS 64
-const int CHIP8_DISPLAY_SIZE = CHIP8_DISPLAY_ROWS * CHIP8_DISPLAY_COLS;
-
-#define CHIP8_STACK_DEPTH 12
-#define CHIP8_MEMORY_SIZE 4096
-
-#define CHIP8_N_KEYS 16
-#define CHIP8_N_REGS 16
-
-uint8_t FONT[] = {
-	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-	0x20, 0x60, 0x20, 0x20, 0x70, // 1
-	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-};
-
-// 15 hex digits, 5 pixels tall each
-const int FONT_SIZE = 15 * 5;
-#define FONT_START 0x50
+#include "chip8.h"
 
 int key_map[] = {
     /* 0 */ KEY_X,
@@ -60,20 +21,8 @@ int key_map[] = {
     /* c */ KEY_FOUR,
     /* d */ KEY_R,
     /* e */ KEY_F,
-    /* f */ KEY_V};
-
-typedef struct {
-    unsigned int pc;
-    uint8_t regs[CHIP8_N_REGS];
-    uint16_t I;
-    unsigned int sp;
-    uint16_t stack[CHIP8_STACK_DEPTH];
-    uint8_t display[CHIP8_DISPLAY_COLS * CHIP8_DISPLAY_ROWS];
-    bool keys[CHIP8_N_KEYS];
-    uint8_t* memory;
-	uint8_t delay_timer;
-	uint8_t sound_timer;
-} Chip8;
+    /* f */ KEY_V
+};
 
 Chip8* chip8_create() {
     Chip8* cpu = malloc(sizeof(Chip8));

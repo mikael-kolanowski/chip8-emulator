@@ -1,0 +1,62 @@
+#ifndef CHIP8_H
+#define CHIP8_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "instr.h"
+
+#define CHIP8_DISPLAY_ROWS 32
+#define CHIP8_DISPLAY_COLS 64
+const int CHIP8_DISPLAY_SIZE = CHIP8_DISPLAY_ROWS * CHIP8_DISPLAY_COLS;
+
+#define CHIP8_STACK_DEPTH 12
+#define CHIP8_MEMORY_SIZE 4096
+
+#define CHIP8_N_KEYS 16
+#define CHIP8_N_REGS 16
+
+// Font courtesy of https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
+uint8_t FONT[] = {
+	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+	0x20, 0x60, 0x20, 0x20, 0x70, // 1
+	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
+
+// 15 hex digits, 5 pixels tall each
+const int FONT_SIZE = 15 * 5;
+#define FONT_START 0x50
+
+typedef struct {
+    unsigned int pc;
+    uint8_t regs[CHIP8_N_REGS];
+    uint16_t I;
+    unsigned int sp;
+    uint16_t stack[CHIP8_STACK_DEPTH];
+    uint8_t display[CHIP8_DISPLAY_COLS * CHIP8_DISPLAY_ROWS];
+    bool keys[CHIP8_N_KEYS];
+    uint8_t* memory;
+	uint8_t delay_timer;
+	uint8_t sound_timer;
+} Chip8;
+
+Chip8* chip8_create();
+void chip8_destroy(Chip8* cpu);
+void chip8_inc_pc(Chip8* cpu);
+void chip8_execute_next(Chip8* cpu);
+bool chip8_load_program(Chip8* cpu, const char* path);
+
+#endif /* CHIP8_H */
