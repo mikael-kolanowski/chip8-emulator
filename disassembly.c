@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "disassembly.h"
 
@@ -43,8 +44,50 @@ void chip8_disassemble(uint16_t instr, char* buffer) {
 			break;
 		}
 		case 0x8: {
-			// TODO: Properly disassemble this one
-			sprintf(buffer, "ARITHMETIC");
+			char* op;
+			switch (Z(instr)) {
+				case 0x0: {
+					asprintf(&op, "=");
+					break;
+				}
+				case 0x1: {
+					asprintf(&op, "|=");
+					break;
+				}
+				case 0x2: {
+					asprintf(&op, "&=");
+					break;
+				}
+				case 0x3: {
+					asprintf(&op, "^=");
+					break;
+				}
+				case 0x4: {
+					asprintf(&op, "+=");
+					break;
+				}
+				case 0x5: {
+					asprintf(&op, "-=");
+					break;
+				}
+				case 0x6: {
+					asprintf(&op, ">>=");
+					break;
+				}
+				case 0xE: {
+					asprintf(&op, "<<=");
+					break;
+				}
+				default:
+					asprintf(&op, "?");
+					break;
+			}
+			if (Z(instr) == 0x7) {
+				sprintf(buffer, "V%x = V%x - V%x", X(instr), Y(instr), X(instr));
+				return;
+			}
+			sprintf(buffer, "V%x = V%x %s V%x", X(instr), X(instr), op, Y(instr));
+			free(op);
 			break;
 		}
 		case 0x9: {
@@ -76,7 +119,6 @@ void chip8_disassemble(uint16_t instr, char* buffer) {
 			break;
 		}
 		case 0xF: {
-			sprintf(buffer, "TIMEROP");
 			switch (NN(instr)) {
 				case 0x07: sprintf(buffer, "V%x = DELAY", X(instr)); break;
 				case 0x0A: sprintf(buffer, "V%x = KEY", X(instr)); break;
